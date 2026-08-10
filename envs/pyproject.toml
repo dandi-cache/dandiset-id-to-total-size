@@ -1,9 +1,10 @@
 [project]
-name = "<cache-name>"
+name = "dandiset-id-to-total-size"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
     "datalad",
     "datalad-container",
-    # TODO: add this cache's processing dependencies used by code/update.py.
+    # code/update.py joins the two input subdatasets with the standard library alone, so the
+    # environment needs nothing beyond datalad and the container extension.
 ]
