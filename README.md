@@ -1,12 +1,25 @@
-# DANDI Cache: `<cache-name>`
+# DANDI Cache: `dandiset-id-to-total-size`
 
-`<A short description of what this cache contains and how it is derived.>`
+A cache mapping each Dandiset ID to the total size in bytes of the assets attributed to it.
+
+Each record is a single-key JSON object mapping a Dandiset ID to its total size in bytes:
+
+```json
+{"000003": 8567810761}
+```
+
+The totals are derived by joining two upstream caches, both consumed as input subdatasets:
+
+- [`dandi-cache/content-id-to-usage-dandiset-path`](https://github.com/dandi-cache/content-id-to-usage-dandiset-path) assigns every content ID to exactly one (Dandiset ID, asset path) pair — the *usage* determination.
+- [`dandi-cache/usage-dandiset-path-to-asset-size`](https://github.com/dandi-cache/usage-dandiset-path-to-asset-size) gives each of those content IDs its size in bytes.
+
+Every content ID is therefore counted exactly once, against its usage Dandiset only. A blob shared by several Dandisets contributes its bytes solely to the one the usage determination picked, so these totals sum to the deduplicated footprint of the archive rather than to the sum of the per-Dandiset apparent sizes — they are *not* the sizes the DANDI Archive reports for each Dandiset.
+
+The upstream size cache is accumulative and lags its own source: a content ID whose size is not resolved yet (for example, one belonging to an embargoed Dandiset) is simply absent there and cannot contribute. A total is thus a lower bound whenever the Dandiset still has unresolved content IDs; those counts are published alongside the cache in [`derivatives/logs/unresolved_asset_sizes.txt`](https://github.com/dandi-cache/dandiset-id-to-total-size/blob/derivatives/derivatives/logs/unresolved_asset_sizes.txt), and a Dandiset with no resolved content IDs at all is omitted rather than published as a total of zero.
 
 Updated frequently.
 
 Primarily for use by developers.
-
-> **Note:** Throughout this template, `<cache-name>` refers to the hyphenated repository name (e.g., `my-cache`) and `<cache_name>` refers to the underscored form used for file and variable names (e.g., `my_cache`).
 
 
 
@@ -22,16 +35,16 @@ import json
 
 import requests
 
-url = "https://raw.githubusercontent.com/dandi-cache/<cache-name>/refs/heads/dist/derivatives/<cache_name>.jsonl.gz"
+url = "https://raw.githubusercontent.com/dandi-cache/dandiset-id-to-total-size/refs/heads/dist/derivatives/dandiset_id_to_total_size.jsonl.gz"
 response = requests.get(url)
 lines = gzip.decompress(data=response.content).decode("utf-8").splitlines()
-<cache_name> = [json.loads(line) for line in lines]
+dandiset_id_to_total_size = [json.loads(line) for line in lines]
 ```
 
 ### Save to file
 
 ```bash
-curl https://raw.githubusercontent.com/dandi-cache/<cache-name>/refs/heads/dist/derivatives/<cache_name>.jsonl.gz -o <cache_name>.jsonl.gz
+curl https://raw.githubusercontent.com/dandi-cache/dandiset-id-to-total-size/refs/heads/dist/derivatives/dandiset_id_to_total_size.jsonl.gz -o dandiset_id_to_total_size.jsonl.gz
 ```
 
 
@@ -41,13 +54,13 @@ curl https://raw.githubusercontent.com/dandi-cache/<cache-name>/refs/heads/dist/
 If you plan on using this cache regularly, clone the `derivatives` branch of this repository:
 
 ```bash
-git clone --branch derivatives https://github.com/dandi-cache/<cache-name>.git
+git clone --branch derivatives https://github.com/dandi-cache/dandiset-id-to-total-size.git
 ```
 
 Or, if you prefer [DataLad](https://www.datalad.org/):
 
 ```bash
-datalad clone https://github.com/dandi-cache/<cache-name>.git --branch derivatives
+datalad clone https://github.com/dandi-cache/dandiset-id-to-total-size.git --branch derivatives
 ```
 
 Then set up a CRON on your system to pull the latest version of the cache at your desired frequency.
@@ -55,37 +68,19 @@ Then set up a CRON on your system to pull the latest version of the cache at you
 For example, through `crontab -e`, add:
 
 ```bash
-0 0 * * * git -C /path/to/<cache-name> pull
+0 0 * * * git -C /path/to/dandiset-id-to-total-size pull
 ```
 
 This will minimize data overhead by only loading the most recent changes.
 
 
 
-## How it works
+### Local development
 
-This cache template demonstrates how generated results of the code branch and records every update with full provenance.
+The container image is the authoritative runtime, but you can recreate the environment locally with [uv](https://docs.astral.sh/uv/) for debugging:
 
-It uses three branches:
+```bash
+uv run --project envs python code/update.py --testing
+```
 
-- **`main`** holds only the code of the update logic, the runtime container definition, and the CI workflows (including building and distributing the container images).
-- [**`derivatives`**](https://github.com/dandi-cache/cache-template/tree/derivatives) is a persistent [DataLad](https://www.datalad.org/) dataset on its own branch. Each update is recorded there with `datalad containers-run`, so every revision carries full provenance of the exact command, the input subdataset commit, the output diff, and the runtime container image digest.
-- **`dist`** is the lightweight publication artifact consumed by downstream users and preferred for one-time downloads.
-
-The processing runs inside a published container image (`ghcr.io/dandi-cache/<cache-name>:latest`) that holds only the pinned runtime environment.
-
-The orchestration lives in [`code/update_pipeline.sh`](code/update_pipeline.sh); the actual cache logic lives in [`code/update.py`](code/update.py).
-
-The repository is described as a [BIDS study dataset](https://bids-specification.readthedocs.io/en/stable/common-principles.html#study-dataset) via [`dataset_description.json`](dataset_description.json) (`DatasetType: "study"`). Future enhancements may improve the provenance tracking through this mechanism in line with BEP028.
-
-
-
-## Repository setup
-
-After generating a repository from this template, the full setup checklist lives in [`.claude/skills/setup-cache/SKILL.md`](.claude/skills/setup-cache/SKILL.md): replacing the placeholders, choosing an input mode, implementing the cache logic, and removing the template scaffolding (this section and the **How it works** section above included).
-
-### With Claude Code
-
-Open a [Claude Code](https://claude.com/claude-code) session in the freshly generated repository and start from a prompt like:
-
-> Set up this new DANDI cache using the setup-cache skill. The cache should `<describe what this cache computes, where its inputs come from, and how often it should update>`. Open the result as a single setup PR.
+The `--testing` flag processes only the first few Dandisets and writes `derivatives/testing.jsonl`, leaving the real cache untouched; omit it for a complete update. Either way, the two source caches must already be present under `sourcedata/` (the pipeline provides them as input subdatasets).

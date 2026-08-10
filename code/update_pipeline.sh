@@ -7,7 +7,7 @@
 #   - `derivatives` is a persistent DataLad dataset on its own branch, cloned standalone
 #                   into scratch. The processing is recorded there with
 #                   `datalad containers-run`, so every update carries full provenance (the
-#                   command, the input subdataset commit, the output diff, and the container
+#                   command, the input subdataset commits, the output diff, and the container
 #                   image digest) and history is retained.
 #   - `dist`        is the lightweight, force-recreated publication artifact consumed by
 #                   downstream users (see README.md).
@@ -73,14 +73,24 @@ push_with_retry() {
   retry_with_backoff "git $*" git "$@"
 }
 
-# TODO: pick this cache's input mode — upstream DataLad dataset, local `sourcedata`
-# directory, or first-in-chain network fetch. The three modes, and how these variables
-# drive them, are documented in .claude/skills/setup-cache/SKILL.md (step 2). Leave
-# INPUT_SUBDATASET_URL empty for the two non-subdataset modes; the subdataset handling
-# below is then skipped.
-INPUT_SUBDATASET_URL=""  # e.g. https://github.com/dandi-cache/<input-dataset-name>.git
-INPUT_SUBDATASET_PATH="sourcedata/<input-dataset-name>"
-INPUT_SUBDATASET_BRANCH="derivatives"
+# This cache joins two upstream DANDI caches, so both are registered as input subdatasets
+# under `sourcedata` and pinned in the provenance of every run: the usage-path cache assigns
+# each content id to a single dandiset, and the asset-size cache gives that content id's size.
+# The three arrays are parallel -- one entry per input, in the same order. Each cache publishes
+# its data on its `derivatives` branch (its default branch holds only code), so that is the
+# branch tracked here. code/update.py reads both from `sourcedata` and needs no network access.
+INPUT_SUBDATASET_URLS=(
+  "https://github.com/dandi-cache/content-id-to-usage-dandiset-path.git"
+  "https://github.com/dandi-cache/usage-dandiset-path-to-asset-size.git"
+)
+INPUT_SUBDATASET_PATHS=(
+  "sourcedata/content-id-to-usage-dandiset-path"
+  "sourcedata/usage-dandiset-path-to-asset-size"
+)
+INPUT_SUBDATASET_BRANCHES=(
+  "derivatives"
+  "derivatives"
+)
 
 DS="${RUNNER_TEMP:-/tmp}/derivatives-dataset"
 DISTDIR="${RUNNER_TEMP:-/tmp}/dist-publish"
@@ -100,20 +110,22 @@ rm -rf "${DS}" "${DISTDIR}"
 if git ls-remote --heads "${REPO_URL}" derivatives | grep -q refs/heads/derivatives; then
   echo "Reusing the existing 'derivatives' dataset branch."
   git clone --branch derivatives --single-branch "${REPO_URL}" "${DS}"
-  if [ -n "${INPUT_SUBDATASET_URL}" ]; then
-    git -C "${DS}" submodule update --init "${INPUT_SUBDATASET_PATH}"
-  fi
+  git -C "${DS}" submodule update --init "${INPUT_SUBDATASET_PATHS[@]}"
 else
   echo "Bootstrapping a new 'derivatives' DataLad dataset."
   datalad create --no-annex "${DS}"
-  if [ -n "${INPUT_SUBDATASET_URL}" ]; then
-    datalad clone -d "${DS}" "${INPUT_SUBDATASET_URL}" "${DS}/${INPUT_SUBDATASET_PATH}"
+  for index in "${!INPUT_SUBDATASET_URLS[@]}"; do
+    input_url="${INPUT_SUBDATASET_URLS[${index}]}"
+    input_path="${INPUT_SUBDATASET_PATHS[${index}]}"
+    input_branch="${INPUT_SUBDATASET_BRANCHES[${index}]}"
+
+    datalad clone -d "${DS}" "${input_url}" "${DS}/${input_path}"
     # Track the input dataset's published-data branch (its default branch holds only code),
     # and record that branch in `.gitmodules` so `submodule update --remote` follows it.
-    git -C "${DS}/${INPUT_SUBDATASET_PATH}" fetch origin "${INPUT_SUBDATASET_BRANCH}"
-    git -C "${DS}/${INPUT_SUBDATASET_PATH}" checkout -B "${INPUT_SUBDATASET_BRANCH}" "origin/${INPUT_SUBDATASET_BRANCH}"
-    git -C "${DS}" config -f .gitmodules "submodule.${INPUT_SUBDATASET_PATH}.branch" "${INPUT_SUBDATASET_BRANCH}"
-  fi
+    git -C "${DS}/${input_path}" fetch origin "${input_branch}"
+    git -C "${DS}/${input_path}" checkout -B "${input_branch}" "origin/${input_branch}"
+    git -C "${DS}" config -f .gitmodules "submodule.${input_path}.branch" "${input_branch}"
+  done
   datalad save -d "${DS}" -m "Initialize derivatives dataset"
 fi
 
@@ -135,15 +147,13 @@ mkdir -p derivatives
 cp "${WORKSPACE}/dataset_description.json" dataset_description.json
 datalad save -m "Update dataset_description.json" dataset_description.json
 
-# Advance the input subdataset to its latest commit and record the pointer. `-d .` is
+# Advance the input subdatasets to their latest commits and record the pointers. `-d .` is
 # required here: without it, `datalad save` resolves the target dataset by walking up from
 # the given path, and since that path is itself a subdataset mount point, it silently targets
 # the (clean, nothing-to-save) subdataset instead of registering the new commit in the
 # superdataset -- exiting 0 without saving anything.
-if [ -n "${INPUT_SUBDATASET_URL}" ]; then
-  git submodule update --init --remote "${INPUT_SUBDATASET_PATH}"
-  datalad save -d . -m "Update input subdataset to latest" "${INPUT_SUBDATASET_PATH}"
-fi
+git submodule update --init --remote "${INPUT_SUBDATASET_PATHS[@]}"
+datalad save -d . -m "Update input subdatasets to latest" "${INPUT_SUBDATASET_PATHS[@]}"
 
 # Pin the published image digest and register it as a container. Only the digest is stored
 # (a small text file), so the dataset stays annex-free; ghcr holds the image bytes.
@@ -178,18 +188,16 @@ fi
 # datalad from clearing the outputs first, which is required when the outputs are also prior
 # state (input) of the next incremental run.
 #
-# Input provenance depends on the input mode selected above: with an INPUT_SUBDATASET_URL the
-# subdataset is pinned via `--input`; in the first-in-chain / no-input-dataset mode there is
-# nothing to pin, so no `--input` is declared and the container fetches its own inputs over
-# the network (which therefore must be reachable from inside the container at run time).
+# Both input subdatasets are pinned via `--input`, so every recorded run carries the exact
+# upstream commits its result was computed from.
 RUN_INPUT_ARGS=()
-if [ -n "${INPUT_SUBDATASET_URL}" ]; then
-  RUN_INPUT_ARGS=(--input "${INPUT_SUBDATASET_PATH}")
-fi
+for input_path in "${INPUT_SUBDATASET_PATHS[@]}"; do
+  RUN_INPUT_ARGS+=(--input "${input_path}")
+done
 datalad containers-run -n pipeline --explicit \
   "${RUN_INPUT_ARGS[@]}" \
   --output derivatives \
-  -m "Update <cache-name> (code @ ${GITHUB_SHA}; image ${DIGEST})" \
+  -m "Update dandiset-id-to-total-size (code @ ${GITHUB_SHA}; image ${DIGEST})" \
   "python /code/update.py --base-directory /tmp ${TESTING_ARG}"
 
 # Publish the full results to the `derivatives` branch.
@@ -201,13 +209,13 @@ push_with_retry -C "${DS}" push "${REPO_URL}" HEAD:derivatives
 # complete run).
 uv run --project "${WORKSPACE}/envs" python "${WORKSPACE}/code/compress.py" --base-directory "${DS}"
 mkdir -p "${DISTDIR}/derivatives"
-if [ -f "${DS}/derivatives/<cache_name>.jsonl.gz" ]; then
-  cp "${DS}/derivatives/<cache_name>.jsonl.gz" "${DISTDIR}/derivatives/"
+if [ -f "${DS}/derivatives/dandiset_id_to_total_size.jsonl.gz" ]; then
+  cp "${DS}/derivatives/dandiset_id_to_total_size.jsonl.gz" "${DISTDIR}/derivatives/"
 fi
 cp "${WORKSPACE}/dataset_description.json" "${DISTDIR}/dataset_description.json"
 git -C "${DISTDIR}" init -q -b dist
 git -C "${DISTDIR}" config user.name "${BOT_NAME}"
 git -C "${DISTDIR}" config user.email "${BOT_EMAIL}"
 git -C "${DISTDIR}" add dataset_description.json derivatives
-git -C "${DISTDIR}" commit -q -m "Publish <cache-name>"
+git -C "${DISTDIR}" commit -q -m "Publish dandiset-id-to-total-size"
 push_with_retry -C "${DISTDIR}" push -f "${REPO_URL}" dist:dist
