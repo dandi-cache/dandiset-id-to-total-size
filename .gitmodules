@@ -2,3 +2,8 @@
 	path = sourcedata/content-id-to-usage-dandiset-path
 	url = https://github.com/dandi-cache/content-id-to-usage-dandiset-path.git
 	datalad-url = https://github.com/dandi-cache/content-id-to-usage-dandiset-path.git
+	branch = derivatives
+[submodule "sourcedata/usage-dandiset-path-to-asset-size"]
+	path = sourcedata/usage-dandiset-path-to-asset-size
+	url = https://github.com/dandi-cache/usage-dandiset-path-to-asset-size.git
+	datalad-url = https://github.com/dandi-cache/usage-dandiset-path-to-asset-size.git
