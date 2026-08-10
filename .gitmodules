@@ -7,3 +7,4 @@
 	path = sourcedata/usage-dandiset-path-to-asset-size
 	url = https://github.com/dandi-cache/usage-dandiset-path-to-asset-size.git
 	datalad-url = https://github.com/dandi-cache/usage-dandiset-path-to-asset-size.git
+	branch = derivatives
