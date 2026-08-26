@@ -3,4 +3,5 @@ dandiset_id='001412', unresolved_content_ids=1, resolved_content_ids=35726
 dandiset_id='001424', unresolved_content_ids=2, resolved_content_ids=20
 dandiset_id='001510', unresolved_content_ids=161, resolved_content_ids=151
 dandiset_id='001637', unresolved_content_ids=9, resolved_content_ids=126
+dandiset_id='001887', unresolved_content_ids=28, resolved_content_ids=30
 dandiset_id='001950', unresolved_content_ids=1, resolved_content_ids=9
