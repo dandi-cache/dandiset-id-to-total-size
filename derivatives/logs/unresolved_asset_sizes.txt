@@ -1,7 +1,6 @@
 dandiset_id='000874', unresolved_content_ids=2, resolved_content_ids=145
-dandiset_id='001412', unresolved_content_ids=33, resolved_content_ids=35766
+dandiset_id='001412', unresolved_content_ids=5, resolved_content_ids=35798
 dandiset_id='001424', unresolved_content_ids=2, resolved_content_ids=20
 dandiset_id='001510', unresolved_content_ids=161, resolved_content_ids=322
 dandiset_id='001637', unresolved_content_ids=9, resolved_content_ids=126
 dandiset_id='001950', unresolved_content_ids=1, resolved_content_ids=9
-dandiset_id='001958', unresolved_content_ids=311, resolved_content_ids=0
