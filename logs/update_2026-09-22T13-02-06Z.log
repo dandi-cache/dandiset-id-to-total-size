@@ -1,0 +1,6 @@
+2026-09-22T13:02:06Z INFO Logging to /tmp/logs/update_2026-09-22T13-02-06Z.log.
+2026-09-22T13:02:06Z INFO Update dandiset-id-to-total-size (base directory /tmp).
+2026-09-22T13:02:08Z INFO Loaded 414947 usage paths and 413731 asset sizes.
+2026-09-22T13:02:08Z INFO Totalling asset sizes across 645 Dandisets.
+2026-09-22T13:02:08Z INFO Wrote 643 records to /tmp/derivatives/dandiset_id_to_total_size.jsonl in 0.0 min (peak memory 306 MiB).
+2026-09-22T13:02:08Z INFO 11 Dandisets have at least one content ID without a resolved size.
