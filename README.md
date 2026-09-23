@@ -32,12 +32,11 @@ If you only plan to use this cache infrequently or from disparate locations, you
 ```python
 import gzip
 import json
-
-import requests
+import urllib.request
 
 url = "https://raw.githubusercontent.com/dandi-cache/dandiset-id-to-total-size/refs/heads/dist/derivatives/dandiset_id_to_total_size.jsonl.gz"
-response = requests.get(url)
-lines = gzip.decompress(data=response.content).decode("utf-8").splitlines()
+with urllib.request.urlopen(url) as response:
+    lines = gzip.decompress(data=response.read()).decode("utf-8").splitlines()
 dandiset_id_to_total_size = [json.loads(line) for line in lines]
 ```
 
