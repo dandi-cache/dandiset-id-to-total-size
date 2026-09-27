@@ -20,6 +20,12 @@ name = "content-id-to-usage-dandiset-path"
 [[inputs]]
 name = "usage-dandiset-path-to-asset-size"
 
+# No `[operations.update] limit`, and that is a statement rather than an omission. Every
+# cache declares how much work one scheduled run does, because that is how it meters a
+# backlog across crons. This one has no backlog: it is arithmetic over two files already in
+# hand, so each run does all of the work there is and there is nothing for a limit to say.
+# `--testing` therefore changes only where the output is written.
+
 # The published branches describe this repository as a BIDS study dataset, through a
 # `dataset_description.json` with `DatasetType: "study"`. The pipeline renders that file from this
 # section at the start of every run, so the repository no longer carries it by hand.
