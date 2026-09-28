@@ -3,6 +3,11 @@
 A join of two upstream caches and nothing else: no network, and no state carried from the previous
 run, so every run recomputes the whole cache from the input commits its provenance pins.
 
+That is also why this cache declares no limit while every other one does. A limit says how much of
+a backlog one run works through, and there is no backlog here -- the join is arithmetic over two
+files already in hand, and each run does all of the work there is. `--testing` therefore changes
+only where the output is written.
+
     content-id-to-usage-dandiset-path   {content_id: {dandiset_id: path}}
     usage-dandiset-path-to-asset-size   {content_id: size_in_bytes}
 
@@ -27,7 +32,7 @@ UNRESOLVED_LOG_NAME = "unresolved_asset_sizes.txt"
 
 
 def main() -> None:
-    dataset, arguments = dandi_cache.open_dataset()
+    dataset, _arguments = dandi_cache.open_dataset()
 
     usage_dandiset_path = dataset.read_input("content-id-to-usage-dandiset-path")
     asset_size = dataset.read_input("usage-dandiset-path-to-asset-size")
@@ -41,18 +46,15 @@ def main() -> None:
         if dandiset_path
     }
 
+    # Every Dandiset, in testing too: the join is in-memory arithmetic, so a smoke run that did
+    # part of it would be slower to reason about than one that simply does all of it.
     dandiset_ids = sorted(set(dandiset_of.values()))
-    if dataset.testing:
-        dandiset_ids = dandiset_ids[: dandi_cache.TESTING_LIMIT]
-    targeted = set(dandiset_ids)
     dandi_cache.logger.info("Totalling asset sizes across %d Dandisets.", len(dandiset_ids))
 
     total_of = dict.fromkeys(dandiset_ids, 0)
     resolved_of = dict.fromkeys(dandiset_ids, 0)
     unresolved_of = dict.fromkeys(dandiset_ids, 0)
     for content_id, dandiset_id in dandiset_of.items():
-        if dandiset_id not in targeted:
-            continue
         size = asset_size.get(content_id)
         if size is None:
             unresolved_of[dandiset_id] += 1
@@ -66,7 +68,7 @@ def main() -> None:
         # let the log account for it.
         return [{dandiset_id: total_of[dandiset_id]} for dandiset_id in dandiset_ids if resolved_of[dandiset_id] > 0]
 
-    dandi_cache.run_full_rebuild(dataset, build=build, limit=arguments.limit)
+    dandi_cache.run_full_rebuild(dataset, build=build)
 
     # Rewritten in full every run, so it always describes the current state of the upstream data
     # rather than accumulating history.

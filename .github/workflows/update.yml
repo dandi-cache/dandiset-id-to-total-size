@@ -14,15 +14,10 @@ on:
   workflow_dispatch:
     inputs:
       testing:
-        description: "Testing mode: process a handful of items into testing_-prefixed files, leaving the real cache untouched."
+        description: "Testing mode: write the result to testing_-prefixed files, leaving the real cache untouched. This cache does all of its work either way."
         required: false
         type: boolean
         default: false
-      limit:
-        description: "Cap on the newly valid content IDs processed this run. Leave empty for the default of 500."
-        required: false
-        type: string
-        default: ""
 
 # Serialize all runs across every ref: an in-progress update is never cancelled, and a run
 # triggered while one is executing waits in the queue. The action then skips the queued run once it
@@ -44,6 +39,5 @@ jobs:
         with:
           token: ${{ secrets._GITHUB_API_KEY }}
           testing: ${{ inputs.testing || false }}
-          limit: ${{ inputs.limit || '' }}
           mail-username: ${{ secrets.MAIL_USERNAME }}
           mail-password: ${{ secrets.MAIL_PASSWORD }}
