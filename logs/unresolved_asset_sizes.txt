@@ -1,9 +1,9 @@
 dandiset_id='000874', unresolved_content_ids=2, resolved_content_ids=145
-dandiset_id='001412', unresolved_content_ids=1, resolved_content_ids=36510
+dandiset_id='001412', unresolved_content_ids=1, resolved_content_ids=36522
 dandiset_id='001424', unresolved_content_ids=2, resolved_content_ids=21
 dandiset_id='001510', unresolved_content_ids=161, resolved_content_ids=532
 dandiset_id='001637', unresolved_content_ids=9, resolved_content_ids=126
-dandiset_id='001697', unresolved_content_ids=52, resolved_content_ids=7768
+dandiset_id='001697', unresolved_content_ids=53, resolved_content_ids=7811
 dandiset_id='001769', unresolved_content_ids=1911, resolved_content_ids=5103
 dandiset_id='001829', unresolved_content_ids=1, resolved_content_ids=4
 dandiset_id='001873', unresolved_content_ids=32, resolved_content_ids=1063
