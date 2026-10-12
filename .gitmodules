@@ -10,5 +10,5 @@
 	branch = derivatives
 [submodule "workspace"]
 	path = workspace
-	url = .
+	url = ../dandiset-id-to-total-size.git
 	datalad-url = https://github.com/dandi-cache/dandiset-id-to-total-size.git
