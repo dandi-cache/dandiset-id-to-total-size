@@ -2,12 +2,12 @@ dandiset_id='000213', unresolved_content_ids=1, resolved_content_ids=202
 dandiset_id='000218', unresolved_content_ids=1, resolved_content_ids=295
 dandiset_id='000552', unresolved_content_ids=110, resolved_content_ids=520
 dandiset_id='000874', unresolved_content_ids=2, resolved_content_ids=145
-dandiset_id='001412', unresolved_content_ids=15, resolved_content_ids=55766
+dandiset_id='001412', unresolved_content_ids=26, resolved_content_ids=55791
 dandiset_id='001424', unresolved_content_ids=2, resolved_content_ids=21
 dandiset_id='001510', unresolved_content_ids=161, resolved_content_ids=532
 dandiset_id='001538', unresolved_content_ids=1, resolved_content_ids=1755
 dandiset_id='001637', unresolved_content_ids=9, resolved_content_ids=126
-dandiset_id='001697', unresolved_content_ids=69, resolved_content_ids=9115
+dandiset_id='001697', unresolved_content_ids=69, resolved_content_ids=9121
 dandiset_id='001769', unresolved_content_ids=1911, resolved_content_ids=21382
 dandiset_id='001829', unresolved_content_ids=2, resolved_content_ids=33
 dandiset_id='001873', unresolved_content_ids=35, resolved_content_ids=1094
